@@ -52,22 +52,20 @@ $$P_{total} = l \times 12h^2 + V \times h + 2h$$
 
 ### 训练总 FLOPs
 
-- 前向 = $C_fwd$
-- 反向 ≈ 2 × $C_fwd$（对输入和权重都要算梯度）
-  
-- **总训练 FLOPs ≈ 3 × $C_fwd$**
+- 前向 = $C_{\text{fwd}}$
+- 反向 ≈ $2 \times C_{\text{fwd}}$（对输入和权重都要算梯度）
+- **总训练 FLOPs** ≈ $3 \times C_{\text{fwd}}$
 
-近似公式（忽略 attention 的 s² 项）:
-
-$$\text{FLOPs}_{train} \approx 6 \times P \times s \times B \times \text{num\_tokens}$$
+近似公式（忽略 attention 的 $s^2$ 项）：
+$$\text{FLOPs}_{\text{train}} \approx 6 \times P \times s \times B \times \text{num\_tokens}$$
 
 ## 4. KV Cache 计算（推理）
 
-- 每层每 token 的 KV 缓存：2 × h × bytes_per_element
-- 总 KV Cache = **2 × B × l × s × h × dtype_bytes**
+- 每层每 token 的 KV 缓存：$2 \times h \times \text{bytes\_per\_element}$
+- 总 KV Cache = $2 \times B \times l \times s \times h \times \text{dtype\_bytes}$
 
-对于 GQA（n_kv_heads < n_heads）：
-$$\text{KV Cache} = 2 \times B \times l \times s \times n_{kv\_heads} \times d_{head} \times \text{dtype\_bytes}$$
+对于 GQA（$n_{\text{kv\_heads}} < n_{\text{heads}}$）：
+$$\text{KV Cache} = 2 \times B \times l \times s \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{dtype\_bytes}$$
 
 ## 5. 模型参数 / 梯度 / 优化器状态显存
 
@@ -103,9 +101,9 @@ $$\text{KV Cache} = 2 \times B \times l \times s \times n_{kv\_heads} \times d_{
 
 每个 Transformer 层的中间激活（FP16，需要保留用于反向传播）：
 
-$$\text{Activation} = sbh \times (34 + 5 \frac{n_h \times s}{h}) \text{ bytes}$$
+$$\text{Activation} = sbh \times \left(34 + 5 \frac{n_h \times s}{h}\right) \text{ bytes}$$
 
-其中 s=序列长度，b=batch size，h=hidden dim，n_h=注意力头数
+其中 $s$ = 序列长度，$b$ = batch size，$h$ = hidden dim，$n_h$ = 注意力头数
 
 ---
 
@@ -146,25 +144,25 @@ calc.print_full_report()
 
 | 原语 | 语义 | 通信量 |
 |------|------|--------|
-| `broadcast` | root 的数据广播到所有 rank | $(N-1) \times \|T\|$ |
-| `scatter` | 将数据沿 dim 切分，分发给各 rank | $\frac{N-1}{N} \times \|T\|$ |
-| `gather` | 将各 rank 的数据拼接到 root | $\frac{N-1}{N} \times \|T\|$ |
+| `broadcast` | root 的数据广播到所有 rank | $(N-1) \cdot \lvert T \rvert$ |
+| `scatter` | 将数据沿 dim 切分，分发给各 rank | $\frac{N-1}{N} \cdot \lvert T \rvert$ |
+| `gather` | 将各 rank 的数据拼接到 root | $\frac{N-1}{N} \cdot \lvert T \rvert$ |
 
 ### Collective Operations
 
 | 原语 | 语义 | 通信量 |
 |------|------|--------|
-| `all_gather` | 每个 rank 都拿到完整拼接结果 | $\frac{N-1}{N} \times \|T_{full}\|$ |
-| `reduce` | 所有 rank 规约(求和)到 root | $(N-1) \times \|T\|$ |
-| `all_reduce` | 规约后每个 rank 都拿到结果 | $\frac{2(N-1)}{N} \times \|T\|$ (Ring) |
-| `reduce_scatter` | 先规约再切分，rank i 拿第 i 片 | $\frac{N-1}{N} \times \|T\|$ |
-| `all_to_all` | 全交换 (chunk 矩阵转置) | $\frac{N-1}{N} \times \|T_{total}\|$ |
+| `all_gather` | 每个 rank 都拿到完整拼接结果 | $\frac{N-1}{N} \cdot \lvert T_\text{full} \rvert$ |
+| `reduce` | 所有 rank 规约(求和)到 root | $(N-1) \cdot \lvert T \rvert$ |
+| `all_reduce` | 规约后每个 rank 都拿到结果 | $\frac{2(N-1)}{N} \cdot \lvert T \rvert$ (Ring) |
+| `reduce_scatter` | 先规约再切分，rank i 拿第 i 片 | $\frac{N-1}{N} \cdot \lvert T \rvert$ |
+| `all_to_all` | 全交换 (chunk 矩阵转置) | $\frac{N-1}{N} \cdot \lvert T_\text{total} \rvert$ |
 
 ### Algorithmic Variants
 
 | 原语 | 语义 | 特点 |
 |------|------|------|
-| `ring_all_reduce` | Ring 拓扑 AllReduce | 带宽最优: $\frac{2(N-1)}{N} \times \|T\|$ |
+| `ring_all_reduce` | Ring 拓扑 AllReduce | 带宽最优: $\frac{2(N-1)}{N} \cdot \lvert T \rvert$ |
 | `scatter_reduce` | 先切分再规约 (Ring Phase-1) | 等大小输入与 reduce_scatter 等价 |
 
 ## 10. 通信原语图示 (4 ranks)
@@ -246,7 +244,7 @@ Phase 2 — All-Gather (N-1 步):
 
 ## 12. 原语之间的数学恒等关系
 
-这些恒等关系在 test_comm.py 中逐一验证:
+这些恒等关系在 `test_comm.py` 中逐一验证:
 
 ```
 all_reduce    ≡  reduce + broadcast
@@ -269,8 +267,8 @@ scatter_reduce  ≡ reduce_scatter (等大小输入)
 | 并行策略 | 使用的通信原语 | 场景 |
 |---------|---------------|------|
 | **DDP (数据并行)** | `all_reduce` | 梯度同步: AllReduce 求和后取平均 |
-| **TP 列并行** | `all_gather` | 拼接部分输出列: $[Y_0 \| Y_1] = [X@W_0 \| X@W_1]$ |
-| **TP 行并行** | `all_reduce` | 求和部分结果: $Y = X_0@W_0 + X_1@W_1$ |
+| **TP 列并行** | `all_gather` | 拼接部分输出列: $[Y_0 , Y_1] = [XW_0 , XW_1]$ |
+| **TP 行并行** | `all_reduce` | 求和部分结果: $Y = X_0 W_0 + X_1 W_1$ |
 | **FSDP 前向** | `all_gather` | AllGather 权重分片 → 重建完整权重 |
 | **FSDP 反向** | `reduce_scatter` | ReduceScatter 梯度 → 每个 rank 只保留自己的分片 |
 | **MoE 专家并行** | `all_to_all` | Token dispatch: 按路由发到对应专家所在 GPU |
