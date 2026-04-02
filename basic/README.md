@@ -54,6 +54,7 @@ $$P_{total} = l \times 12h^2 + V \times h + 2h$$
 
 - 前向 = C_fwd
 - 反向 ≈ 2 × C_fwd（对输入和权重都要算梯度）
+  
 - **总训练 FLOPs ≈ 3 × C_fwd**
 
 近似公式（忽略 attention 的 s² 项）：
