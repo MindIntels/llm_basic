@@ -30,7 +30,7 @@
 
 ### 完整模型
 
-$$P_{total} = l \times 12h^2 + V \times h + 2h$$
+$$P_{\text{total}} = l \times 12h^2 + V \times h + 2h$$
 
 其中 l=层数，V=词表大小，最后 2h 是 final LayerNorm
 
@@ -57,15 +57,19 @@ $$P_{total} = l \times 12h^2 + V \times h + 2h$$
 - **总训练 FLOPs** ≈ $3 \times C_{\text{fwd}}$
 
 近似公式（忽略 attention 的 $s^2$ 项）：
-$$\text{FLOPs}_{\text{train}} \approx 6 \times P \times s \times B \times \text{num\_tokens}$$
+$$F_{\text{train}} \approx 6 \times P \times s \times B \times N_{\text{tok}}$$
+
+其中 $F_{\text{train}}$ 为训练 FLOPs，$N_{\text{tok}}$ 为总 token 数
 
 ## 4. KV Cache 计算（推理）
 
-- 每层每 token 的 KV 缓存：$2 \times h \times \text{bytes\_per\_element}$
-- 总 KV Cache = $2 \times B \times l \times s \times h \times \text{dtype\_bytes}$
+- 每层每 token 的 KV 缓存：$2 \times h \times b$ （$b$ = 每元素字节数）
+- 总 KV Cache = $2 \times B \times l \times s \times h \times b$
 
-对于 GQA（$n_{\text{kv\_heads}} < n_{\text{heads}}$）：
-$$\text{KV Cache} = 2 \times B \times l \times s \times n_{\text{kv\_heads}} \times d_{\text{head}} \times \text{dtype\_bytes}$$
+对于 GQA（$n_{\text{kv}} < n_h$）：
+$$\text{KV Cache} = 2 \times B \times l \times s \times n_{\text{kv}} \times d_h \times b$$
+
+其中 $n_{\text{kv}}$ = KV 头数，$d_h$ = head dim，$b$ = dtype 字节数
 
 ## 5. 模型参数 / 梯度 / 优化器状态显存
 
