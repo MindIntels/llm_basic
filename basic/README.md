@@ -57,7 +57,8 @@ $$P_{total} = l \times 12h^2 + V \times h + 2h$$
   
 - **总训练 FLOPs ≈ 3 × $C_fwd$**
 
-近似公式（忽略 attention 的 s² 项）：
+近似公式（忽略 attention 的 s² 项）:
+
 $$\text{FLOPs}_{train} \approx 6 \times P \times s \times B \times \text{num\_tokens}$$
 
 ## 4. KV Cache 计算（推理）
