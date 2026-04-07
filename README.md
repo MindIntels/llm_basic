@@ -1,9 +1,5 @@
 # Transformer 模型参数量 / FLOPs / 显存分析
 
-> 基于 [知乎: 分析transformer模型的参数量、计算量、中间激活、KV cache](https://zhuanlan.zhihu.com/p/624740065) 的深度总结与代码实现
-
----
-
 ## 1. Transformer 层结构回顾
 
 一个标准 Transformer Decoder 层包含：
